@@ -501,6 +501,12 @@
             <div class="exam-meta" id="reviewCountMeta">已選：0 題</div>
         </div>
         <div class="exam-body" style="padding: 20px 30px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button id="selectAllBtn" class="btn"
+                    style="padding: 6px 15px; font-size: 0.85rem; border-color: #cbd5e0; background: #edf2f7;">全選</button>
+                <button id="deselectAllBtn" class="btn"
+                    style="padding: 6px 15px; font-size: 0.85rem; border-color: #cbd5e0; background: #edf2f7;">取消所有</button>
+            </div>
             <div class="review-list" id="reviewListContainer">
                 <!-- JS 動態生成 -->
             </div>
@@ -724,6 +730,9 @@
                 this.cancelBtn = document.getElementById('cancelReviewBtn');
                 this.countMeta = document.getElementById('reviewCountMeta');
 
+                this.selectAllBtn = document.getElementById('selectAllBtn');
+                this.deselectAllBtn = document.getElementById('deselectAllBtn');
+
                 this.onStartReviewExam = onStartReviewExam;
                 this.onCancel = onCancel;
 
@@ -752,6 +761,26 @@
                     this.reviewContainer.style.display = 'none';
                     this.onStartReviewExam(selectedDocs);
                 });
+
+                if (this.selectAllBtn) {
+                    this.selectAllBtn.addEventListener('click', () => {
+                        const checkboxes = this.listContainer.querySelectorAll('.review-checkbox');
+                        checkboxes.forEach(cb => {
+                            cb.checked = true;
+                            this.selectedIndexes.add(parseInt(cb.value));
+                        });
+                        this.updateCount();
+                    });
+                }
+
+                if (this.deselectAllBtn) {
+                    this.deselectAllBtn.addEventListener('click', () => {
+                        const checkboxes = this.listContainer.querySelectorAll('.review-checkbox');
+                        checkboxes.forEach(cb => cb.checked = false);
+                        this.selectedIndexes.clear();
+                        this.updateCount();
+                    });
+                }
             }
 
             async loadAndShow() {
