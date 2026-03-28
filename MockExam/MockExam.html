@@ -436,6 +436,97 @@
             color: var(--text-main);
             line-height: 1.5;
         }
+
+        /* ------------------------------------- */
+        /* 行動裝置/手機版 響應式優化 (RWD)       */
+        /* ------------------------------------- */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                align-items: flex-start;
+                /* 手機上靠上對齊，避免虛擬鍵盤擠壓 */
+            }
+
+            .exam-header {
+                padding: 15px;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .exam-body {
+                padding: 20px 15px;
+                min-height: auto;
+            }
+
+            .question-text {
+                font-size: 1.15rem;
+            }
+
+            .progress-grid {
+                padding: 15px 15px 0 15px;
+                justify-content: center;
+            }
+
+            .grid-item {
+                width: 32px;
+                height: 32px;
+                font-size: 0.9rem;
+            }
+
+            .exam-footer {
+                padding: 15px;
+                flex-direction: column-reverse;
+                /* 手機上將「上一題」排在最下面 */
+                gap: 15px;
+            }
+
+            .controls-right {
+                width: 100%;
+                display: flex;
+                gap: 10px;
+            }
+
+            .controls-right .btn {
+                flex: 1;
+                padding: 12px 5px;
+                /* 加大按鈕點擊範圍 */
+            }
+
+            #prevBtn {
+                width: 100%;
+                padding: 12px 5px;
+            }
+
+            /* 登入、設定表單 RWD */
+            .form-control {
+                padding: 15px 12px;
+                font-size: 1.05rem;
+            }
+
+            /* 複習介面 RWD */
+            .review-item {
+                padding: 15px 10px;
+                gap: 12px;
+                align-items: center;
+            }
+
+            .review-item input[type="checkbox"] {
+                transform: scale(1.5);
+                margin-left: 5px;
+                margin-right: 5px;
+            }
+
+            .review-container .exam-body>div:last-child {
+                flex-direction: column-reverse;
+                gap: 10px;
+            }
+
+            .review-container .exam-body>div:last-child .btn {
+                width: 100%;
+                flex: none !important;
+                padding: 12px 10px;
+            }
+        }
     </style>
 </head>
 
