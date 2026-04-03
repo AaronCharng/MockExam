@@ -592,11 +592,17 @@
             <div class="exam-meta" id="reviewCountMeta">已選：0 題</div>
         </div>
         <div class="exam-body" style="padding: 20px 30px;">
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
                 <button id="selectAllBtn" class="btn"
                     style="padding: 6px 15px; font-size: 0.85rem; border-color: #cbd5e0; background: #edf2f7;">全選</button>
                 <button id="deselectAllBtn" class="btn"
                     style="padding: 6px 15px; font-size: 0.85rem; border-color: #cbd5e0; background: #edf2f7;">取消所有</button>
+                <button id="selectAllEasyBtn" class="btn"
+                    style="padding: 6px 15px; font-size: 0.85rem; border-color: #bee3f8; background: #ebf8ff; color: #2b6cb0;">全選易</button>
+                <button id="selectAllMediumBtn" class="btn"
+                    style="padding: 6px 15px; font-size: 0.85rem; border-color: #c6f6d5; background: #f0fff4; color: #2f855a;">全選中</button>
+                <button id="selectAllHardBtn" class="btn"
+                    style="padding: 6px 15px; font-size: 0.85rem; border-color: #fed7d7; background: #fff5f5; color: #c53030;">全選難</button>
             </div>
             <div class="review-list" id="reviewListContainer">
                 <!-- JS 動態生成 -->
@@ -823,6 +829,9 @@
 
                 this.selectAllBtn = document.getElementById('selectAllBtn');
                 this.deselectAllBtn = document.getElementById('deselectAllBtn');
+                this.selectAllEasyBtn = document.getElementById('selectAllEasyBtn');
+                this.selectAllMediumBtn = document.getElementById('selectAllMediumBtn');
+                this.selectAllHardBtn = document.getElementById('selectAllHardBtn');
 
                 this.onStartReviewExam = onStartReviewExam;
                 this.onCancel = onCancel;
@@ -871,6 +880,34 @@
                         this.selectedIndexes.clear();
                         this.updateCount();
                     });
+                }
+
+                const selectByDifficulty = (difficulty) => {
+                    const checkboxes = this.listContainer.querySelectorAll('.review-checkbox');
+                    checkboxes.forEach(cb => {
+                        const idx = parseInt(cb.value);
+                        const q = this.allQuestions[idx];
+                        let match = false;
+                        if (difficulty === '易' && q.難度 === '易') match = true;
+                        else if (difficulty === '中' && q.難度 === '中') match = true;
+                        else if (difficulty === '難' && (q.難度 === '難' || (q.難度 !== '易' && q.難度 !== '中'))) match = true;
+
+                        if (match) {
+                            cb.checked = true;
+                            this.selectedIndexes.add(idx);
+                        }
+                    });
+                    this.updateCount();
+                };
+
+                if (this.selectAllEasyBtn) {
+                    this.selectAllEasyBtn.addEventListener('click', () => selectByDifficulty('易'));
+                }
+                if (this.selectAllMediumBtn) {
+                    this.selectAllMediumBtn.addEventListener('click', () => selectByDifficulty('中'));
+                }
+                if (this.selectAllHardBtn) {
+                    this.selectAllHardBtn.addEventListener('click', () => selectByDifficulty('難'));
                 }
             }
 
