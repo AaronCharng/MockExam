@@ -70,6 +70,13 @@
             max-height: 90vh;
         }
 
+        .review-container .exam-body {
+            flex: 1;
+            min-height: 0;
+            /* 讓內容超出時可滑動，確保按鈕不會完全消失 */
+            overflow-y: auto;
+        }
+
         @keyframes fadeIn {
             from {
                 transform: translateY(20px);
@@ -379,8 +386,10 @@
 
         /* 複習清單樣式 */
         .review-list {
+            flex: 1;
+            min-height: 150px;
             overflow-y: auto;
-            max-height: 50vh;
+            /* 取消絕對的高度限制，改用 flex-grow 將剩餘空間填滿，確保底部按鈕可視 */
             padding: 10px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
@@ -516,12 +525,12 @@
                 margin-right: 5px;
             }
 
-            .review-container .exam-body>div:last-child {
+            #reviewActionBtns {
                 flex-direction: column-reverse;
                 gap: 10px;
             }
 
-            .review-container .exam-body>div:last-child .btn {
+            #reviewActionBtns .btn {
                 width: 100%;
                 flex: none !important;
                 padding: 12px 10px;
@@ -604,13 +613,13 @@
                 <button id="selectAllHardBtn" class="btn"
                     style="padding: 6px 15px; font-size: 0.85rem; border-color: #fed7d7; background: #fff5f5; color: #c53030;">全選難</button>
             </div>
-            <div class="review-list" id="reviewListContainer">
-                <!-- JS 動態生成 -->
-            </div>
-            <div style="display: flex; gap: 15px;">
+            <div id="reviewActionBtns" style="display: flex; gap: 15px; margin-bottom: 15px;">
                 <button id="cancelReviewBtn" class="btn" style="flex: 1;">返回設定</button>
                 <button id="startReviewExamBtn" class="btn btn-primary"
                     style="flex: 2; background-color: #ed8936; border-color: #ed8936;">進入複習模式測驗</button>
+            </div>
+            <div class="review-list" id="reviewListContainer" style="margin-bottom: 0;">
+                <!-- JS 動態生成 -->
             </div>
         </div>
     </div>
