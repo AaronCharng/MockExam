@@ -293,7 +293,9 @@
     <script>
         let lotsData = [];
         let currentLot = null;
-        let holyCupCount = 0;
+        let baseRate = 0.4;
+        let failCount = 0;
+        let comboCount = 0;
         let appState = 'INIT'; // 可為 INIT, CASTING, FINISHED
 
         const els = {
@@ -356,7 +358,7 @@
 
             els.cupImage.style.display = 'none';
             els.resultSection.style.display = 'none';
-            holyCupCount = 0;
+            comboCount = 0;
             appState = 'CASTING';
         }
 
@@ -367,41 +369,56 @@
 
             // 使用 setTimeout 創造簡單節奏感
             setTimeout(() => {
-                // 決定結果：0 = 聖杯, 1 = 笑杯, 2 = 無杯 (平均機率)
-                const result = Math.floor(Math.random() * 3);
+                // 當前機率計算
+                let currentRate = baseRate;
+                if (failCount >= 5) {
+                    currentRate += (failCount - 4) * 0.02;
+                }
+                if (comboCount === 1) currentRate += 0.10;
+                else if (comboCount === 2) currentRate += 0.20;
+
+                if (currentRate > 1) currentRate = 1.0;
+
+                const rng = Math.random();
 
                 // 為了重啟動畫，先將圖示隱藏再顯示
                 els.cupImage.style.display = 'none';
                 void els.cupImage.offsetWidth; // 強制瀏覽器重繪 (Reflow) 讓動畫能重新觸發
                 els.cupImage.style.display = 'block';
 
-                if (result === 0) {
+                if (rng <= currentRate) {
                     // 聖杯
-                    holyCupCount++;
+                    comboCount++;
                     els.cupImage.src = 'pics/GodSayYes.png';
 
-                    if (holyCupCount >= 3) {
+                    if (comboCount >= 3) {
+                        failCount = 0;
+                        comboCount = 0;
                         finishSuccess();
                     } else {
-                        els.statusText.textContent = `需連續擲出三次【 聖盃 】才是靈簽，目前你已擲出 ${holyCupCount} 次`;
+                        els.statusText.textContent = `需連續擲出三次【 聖盃 】才是靈簽，目前你已擲出 ${comboCount} 次`;
                         els.statusText.style.backgroundColor = '#f0fff4';
                         els.statusText.style.borderColor = '#c6f6d5';
                         els.actionBtn.disabled = false;
                     }
-                } else if (result === 1) {
-                    // 笑杯
-                    els.cupImage.src = 'pics/GodHaHa.png';
-                    failCasting('笑杯');
                 } else {
-                    // 無杯
-                    els.cupImage.src = 'pics/GodSayNo.png';
-                    failCasting('無杯');
+                    // 笑杯或無杯
+                    failCount++;
+                    comboCount = 0;
+
+                    if (Math.random() < 0.5) {
+                        els.cupImage.src = 'pics/GodHaHa.png';
+                        failCasting('笑杯');
+                    } else {
+                        els.cupImage.src = 'pics/GodSayNo.png';
+                        failCasting('無杯');
+                    }
                 }
             }, 100);
         }
 
         function failCasting(cupName) {
-            holyCupCount = 0;
+            comboCount = 0;
             els.statusText.textContent = `您擲出了【 ${cupName} 】，此簽不准，請重新抽籤！`;
             els.statusText.style.backgroundColor = '#fff5f5';
             els.statusText.style.borderColor = '#fc8181';
