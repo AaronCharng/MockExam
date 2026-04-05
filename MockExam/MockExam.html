@@ -584,6 +584,7 @@
             </div>
             <div id="settingsError" class="error-message" style="display: none;"></div>
             <button id="startExamBtn" class="btn btn-primary" style="width: 100%;">依設定開始隨機測驗</button>
+            <button id="specialTestBtn" class="btn" style="width: 100%; margin-top: 10px; background-color: #ffffff; color: #f4f6f8; border-color: #f4f6f8; outline: none;">隨機測驗測試</button>
             <div style="position: relative; text-align: center; margin: 15px 0;">
                 <hr style="border: none; border-top: 1px solid #e2e8f0;">
                 <span
@@ -729,23 +730,29 @@
         // 題數設定與抽題模組
         // ----------------------------------------------------
         class SettingsApp {
-            constructor(onStartExam, onOpenReview) {
+            constructor(onStartExam, onOpenReview, onStartSpecialExam) {
                 this.settingsContainer = document.getElementById('settingsApp');
                 this.easyCountInput = document.getElementById('easyCount');
                 this.mediumCountInput = document.getElementById('mediumCount');
                 this.hardCountInput = document.getElementById('hardCount');
                 this.startExamBtn = document.getElementById('startExamBtn');
+                this.specialTestBtn = document.getElementById('specialTestBtn');
                 this.openReviewBtn = document.getElementById('openReviewBtn');
                 this.settingsError = document.getElementById('settingsError');
 
                 this.onStartExam = onStartExam;
                 this.onOpenReview = onOpenReview;
+                this.onStartSpecialExam = onStartSpecialExam;
 
                 this.attachEventListeners();
             }
 
             attachEventListeners() {
                 this.startExamBtn.addEventListener('click', () => this.handleStart());
+
+                if (this.specialTestBtn) {
+                    this.specialTestBtn.addEventListener('click', () => this.handleSpecialStart());
+                }
 
                 if (this.openReviewBtn) {
                     this.openReviewBtn.addEventListener('click', () => {
@@ -810,6 +817,65 @@
                 } finally {
                     this.startExamBtn.disabled = false;
                     this.startExamBtn.textContent = '依設定開始隨機測驗';
+                }
+            }
+
+            async handleSpecialStart() {
+                this.specialTestBtn.disabled = true;
+                this.specialTestBtn.textContent = '題庫載入中...';
+                this.settingsError.style.display = 'none';
+
+                try {
+                    const response = await fetch('json/exam.json');
+                    if (!response.ok) throw new Error('無法取得題庫資料');
+                    const allQuestions = await response.json();
+
+                    // 分類題庫
+                    const easyPool = allQuestions.filter(q => q.難度 === '易');
+                    const mediumPool = allQuestions.filter(q => q.難度 === '中');
+                    const hardPool = allQuestions.filter(q => q.難度 === '難' || (q.難度 !== '易' && q.難度 !== '中'));
+
+                    // 前25題：簡單區隨機 15 題，中等區固定 10 題
+                    const mediumFixedIds = [2, 4, 6, 7, 10, 13, 15, 16, 17, 18];
+                    
+                    const selectedEasy = this.shuffleArray(easyPool).slice(0, 15);
+                    const selectedMedium = mediumPool.filter(q => mediumFixedIds.includes(parseInt(q.題號)));
+                    
+                    if (selectedMedium.length < 10) {
+                         let remaining = 10 - selectedMedium.length;
+                         const remainingPool = mediumPool.filter(q => !mediumFixedIds.includes(parseInt(q.題號)));
+                         selectedMedium.push(...this.shuffleArray(remainingPool).slice(0, remaining));
+                    }
+                    
+                    const block1 = this.shuffleArray([...selectedEasy, ...selectedMedium]);
+
+                    // 後5題：困難區固定 4 題
+                    const hardFixedIds = [5, 7, 16, 18];
+                    const hardExcludeIds = [1, 2, 3, 4, 12];
+                    
+                    const selectedHardFixed = hardPool.filter(q => hardFixedIds.includes(parseInt(q.題號)));
+                    const remainingHardPool = hardPool.filter(q => !hardFixedIds.includes(parseInt(q.題號)) && !hardExcludeIds.includes(parseInt(q.題號)));
+                    
+                    const selectedHardRandom = this.shuffleArray(remainingHardPool).slice(0, 5 - selectedHardFixed.length);
+                    const block2 = this.shuffleArray([...selectedHardFixed, ...selectedHardRandom]);
+                    
+                    const finalPaper = [...block1, ...block2];
+
+                    if (finalPaper.length === 0) {
+                        this.showError('在目前題庫中找不到符合條件的題目。');
+                        return;
+                    }
+
+                    this.settingsContainer.style.display = 'none';
+                    if (this.onStartSpecialExam) {
+                        this.onStartSpecialExam(finalPaper);
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    this.showError('無法讀取 json/exam.json 題庫。<br>請確認您的題庫檔案存在，並在伺服器環境下開啟。');
+                } finally {
+                    this.specialTestBtn.disabled = false;
+                    this.specialTestBtn.textContent = '隨機測驗測試';
                 }
             }
 
@@ -1006,9 +1072,11 @@
         // 測驗功能模組
         // ----------------------------------------------------
         class MockExamApp {
-            constructor(questions, isReviewMode = false) {
+            constructor(questions, isReviewMode = false, options = {}) {
                 this.questions = questions;
                 this.isReviewMode = isReviewMode; // 如果是 true 則顯示「題號」以利對照複習
+                this.isSpecialMode = options.isSpecialMode || false;
+                this.hideDifficulty = options.hideDifficulty || false;
                 this.currentIndex = 0;
                 this.appElement = document.getElementById('app');
                 this.answerShown = false;
@@ -1023,13 +1091,20 @@
                 const question = this.questions[this.currentIndex];
 
                 // 產生進度條網格的 HTML
-                const gridHtml = this.questions.map((_, idx) => `
+                const gridHtml = this.questions.map((_, idx) => {
+                    let html = `
                     <div class="grid-item ${idx === this.currentIndex ? 'active' : ''} ${this.userInputs[idx].trim() !== '' ? 'answered' : ''}" 
                          id="grid-item-${idx}" 
                          data-index="${idx}">
                         ${idx + 1}
                     </div>
-                `).join('');
+                    `;
+                    // 若為隨機測驗測試模式，在第 25 題後插入分隔斷行
+                    if (this.isSpecialMode && idx === 24) {
+                        html += `<div style="flex-basis: 100%; height: 0; margin: 5px 0; border-bottom: 2px dashed #cbd5e0;"></div>`;
+                    }
+                    return html;
+                }).join('');
 
                 this.appElement.innerHTML = `
                     <div class="exam-header">
@@ -1040,8 +1115,8 @@
                         ${gridHtml}
                     </div>
                     <div class="exam-body">
-                        <div class="question-meta">
-                            <span class="difficulty-badge">難度：${question.難度 || '未知'}</span>
+                        <div class="question-meta" ${this.hideDifficulty && !this.isReviewMode ? 'style="display: none;"' : ''}>
+                            <span class="difficulty-badge" ${this.hideDifficulty ? 'style="display: none;"' : ''}>難度：${question.難度 || '未知'}</span>
                             ${this.isReviewMode ? `<span class="question-id">題號：${question.題號 || '未知'}</span>` : ''}
                         </div>
                         <div class="question-text">
@@ -1211,6 +1286,11 @@
                     // onOpenReview (開啟複習介面)
                     () => {
                         reviewApp.loadAndShow();
+                    },
+                    // onStartSpecialExam (隨機測驗測試模式)
+                    (selectedQuestions) => {
+                        appEl.style.display = 'flex';
+                        new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true });
                     }
                 );
             });

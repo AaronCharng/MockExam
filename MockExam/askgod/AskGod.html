@@ -372,7 +372,7 @@
                 // 當前機率計算
                 let currentRate = baseRate;
                 if (failCount >= 5) {
-                    currentRate += (failCount - 4) * 0.02;
+                    currentRate += (failCount - 4) * 0.05;
                 }
                 if (comboCount === 1) currentRate += 0.10;
                 else if (comboCount === 2) currentRate += 0.20;
