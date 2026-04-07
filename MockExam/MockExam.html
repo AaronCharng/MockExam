@@ -611,7 +611,7 @@
             border: 1px solid #e2e8f0;
             transition: var(--transition);
         }
-        
+
         .special-option-label:hover {
             background: #edf2f7;
         }
@@ -632,11 +632,11 @@
             transform: scale(1.2);
             cursor: pointer;
         }
-        
+
         .special-option-label input.cb-must {
             accent-color: #3182ce;
         }
-        
+
         .special-option-label input.cb-exclude {
             accent-color: #e53e3e;
         }
@@ -669,7 +669,8 @@
             </div>
             <div id="settingsError" class="error-message" style="display: none;"></div>
             <button id="startExamBtn" class="btn btn-primary" style="width: 100%;">依設定開始隨機測驗</button>
-            <button id="specialTestBtn" class="btn" style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">進階配題測驗</button>
+            <button id="specialTestBtn" class="btn"
+                style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">進階配題測驗</button>
             <div style="position: relative; text-align: center; margin: 15px 0;">
                 <hr style="border: none; border-top: 1px solid #e2e8f0;">
                 <span
@@ -721,7 +722,7 @@
             <h1 style="font-size: 1.3rem;">特殊測驗設定</h1>
             <div class="exam-meta" id="specialCountMeta">必考: 0 | 不考: 0</div>
         </div>
-        
+
         <div class="tabs-container">
             <button class="tab-btn active" data-tab="easy">容易</button>
             <button class="tab-btn" data-tab="medium">中等</button>
@@ -734,7 +735,7 @@
                 <button id="startSpecialExamBtn" class="btn btn-primary"
                     style="flex: 2; background-color: #319795; border-color: #319795;">以此條件開始測驗</button>
             </div>
-            
+
             <div class="review-list" style="margin-bottom: 0;">
                 <div id="tab-easy" class="tab-content active"></div>
                 <div id="tab-medium" class="tab-content"></div>
@@ -1064,7 +1065,7 @@
                 this.startBtn = document.getElementById('startSpecialExamBtn');
                 this.cancelBtn = document.getElementById('cancelSpecialBtn');
                 this.countMeta = document.getElementById('specialCountMeta');
-                
+
                 this.tabBtns = document.querySelectorAll('#specialSetupApp .tab-btn');
                 this.tabContents = document.querySelectorAll('#specialSetupApp .tab-content');
 
@@ -1096,7 +1097,7 @@
                 try {
                     localStorage.setItem('mockExamPreferences', JSON.stringify(this.preferences));
                 } catch (e) {
-                    console.error('Failed to save preferences to localStorage', e);
+                    console.error('Failed to save preferences to localStorage!', e);
                 }
             }
 
@@ -1115,7 +1116,7 @@
                         // 移除所有 active
                         this.tabBtns.forEach(b => b.classList.remove('active'));
                         this.tabContents.forEach(c => c.classList.remove('active'));
-                        
+
                         // 加上 active
                         const targetTab = e.target.getAttribute('data-tab');
                         e.target.classList.add('active');
@@ -1137,7 +1138,7 @@
                     const response = await fetch('json/exam.json');
                     if (!response.ok) throw new Error('無法取得題庫資料');
                     let qs = await response.json();
-                    
+
                     // 保留原本的 idx 作為識別碼
                     this.allQuestions = qs.map((q, idx) => ({ ...q, originalIndex: idx }));
 
@@ -1209,7 +1210,7 @@
                             // 新增必考，確保從不考移除
                             if (!this.preferences.must.includes(idx)) this.preferences.must.push(idx);
                             this.preferences.exclude = this.preferences.exclude.filter(id => id !== idx);
-                            
+
                             // 更新畫面其他 checkbox
                             const exCb = this.container.querySelector(`.cb-exclude[data-idx="${idx}"]`);
                             if (exCb) exCb.checked = false;
@@ -1229,7 +1230,7 @@
                             // 新增不考，確保從必考移除
                             if (!this.preferences.exclude.includes(idx)) this.preferences.exclude.push(idx);
                             this.preferences.must = this.preferences.must.filter(id => id !== idx);
-                            
+
                             // 更新畫面其他 checkbox
                             const mustCb = this.container.querySelector(`.cb-must[data-idx="${idx}"]`);
                             if (mustCb) mustCb.checked = false;
@@ -1246,15 +1247,15 @@
             updateLabelStyles(idx) {
                 const isMust = this.preferences.must.includes(idx);
                 const isExclude = this.preferences.exclude.includes(idx);
-                
+
                 const lblMust = document.getElementById(`lbl-must-${idx}`);
                 const lblExclude = document.getElementById(`lbl-exclude-${idx}`);
-                
+
                 if (lblMust) {
                     if (isMust) lblMust.classList.add('checked-must');
                     else lblMust.classList.remove('checked-must');
                 }
-                
+
                 if (lblExclude) {
                     if (isExclude) lblExclude.classList.add('checked-exclude');
                     else lblExclude.classList.remove('checked-exclude');
@@ -1284,38 +1285,38 @@
 
                 const generateForDifficulty = (pool, limit) => {
                     if (limit === 0) return [];
-                    
+
                     // 分解當前難度的題目為: 必考, 不考, 可抽
                     const poolMust = [];
                     const poolAvailable = [];
-                    
+
                     pool.forEach(q => {
                         const isMust = this.preferences.must.includes(q.originalIndex);
                         const isExclude = this.preferences.exclude.includes(q.originalIndex);
-                        
+
                         if (isMust) {
                             poolMust.push(q);
                         } else if (!isExclude) {
                             poolAvailable.push(q);
                         }
                     });
-                    
+
                     // 打亂必考題（以防必考數量大於 limit，雖然通常不該發生）
                     const shuffledMust = this.shuffleArray(poolMust);
                     const selectedMust = shuffledMust.slice(0, limit);
-                    
+
                     // 如果必考題已經超過或等於限制，就直接回傳
                     if (selectedMust.length >= limit) {
                         return selectedMust;
                     }
-                    
+
                     // 計算還需要幾題
                     const remainingLimit = limit - selectedMust.length;
-                    
+
                     // 從可用題庫隨機抽取
                     const shuffledAvailable = this.shuffleArray(poolAvailable);
                     const selectedAvailable = shuffledAvailable.slice(0, remainingLimit);
-                    
+
                     // 合併並打亂順序
                     return this.shuffleArray([...selectedMust, ...selectedAvailable]);
                 };
@@ -1325,7 +1326,7 @@
                 const finalHard = generateForDifficulty(hardPool, this.currentCounts.hardReq);
 
                 const finalPaper = this.shuffleArray([...finalEasy, ...finalMedium, ...finalHard]);
-                
+
                 if (finalPaper.length === 0) {
                     alert('沒有題目可以產生！請檢查題數條件或不考比例。');
                     return;
