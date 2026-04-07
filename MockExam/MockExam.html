@@ -47,7 +47,6 @@
             animation: fadeIn 0.5s ease-out;
         }
 
-        .login-container,
         .settings-container,
         .review-container {
             background-color: var(--card-bg);
@@ -60,7 +59,6 @@
             animation: fadeIn 0.5s ease-out;
         }
 
-        .login-container,
         .settings-container {
             max-width: 400px;
         }
@@ -506,7 +504,7 @@
                 padding: 12px 5px;
             }
 
-            /* 登入、設定表單 RWD */
+            /* 設定表單 RWD */
             .form-control {
                 padding: 15px 12px;
                 font-size: 1.05rem;
@@ -540,25 +538,6 @@
 </head>
 
 <body>
-
-    <!-- 登入介面 -->
-    <div class="login-container" id="loginApp">
-        <div class="exam-header" style="justify-content: center;">
-            <h1 style="font-size: 1.3rem;">MockExam 系統登入</h1>
-        </div>
-        <div class="exam-body" style="min-height: auto; padding: 30px;">
-            <div class="form-group">
-                <label for="userId">帳號</label>
-                <input type="text" id="userId" class="form-control" placeholder="請輸入帳號" autocomplete="off">
-            </div>
-            <div class="form-group">
-                <label for="userPw">密碼</label>
-                <input type="password" id="userPw" class="form-control" placeholder="請輸入密碼">
-            </div>
-            <div id="loginError" class="error-message" style="display: none;"></div>
-            <button id="loginBtn" class="btn btn-primary" style="width: 100%;">登入</button>
-        </div>
-    </div>
 
     <!-- 考題設定介面 -->
     <div class="settings-container" id="settingsApp" style="display: none;">
@@ -636,96 +615,6 @@
     </div>
 
     <script>
-        // ----------------------------------------------------
-        // 登入功能模組
-        // ----------------------------------------------------
-        class LoginApp {
-            constructor(onSuccess) {
-                this.loginContainer = document.getElementById('loginApp');
-                this.userIdInput = document.getElementById('userId');
-                this.userPwInput = document.getElementById('userPw');
-                this.loginBtn = document.getElementById('loginBtn');
-                this.loginError = document.getElementById('loginError');
-                this.onSuccess = onSuccess;
-
-                // 檢查是否已有暫存登入資訊
-                this.checkSession();
-                this.attachEventListeners();
-            }
-
-            checkSession() {
-                const sessionStr = sessionStorage.getItem('mockExamLogin');
-                if (sessionStr) {
-                    try {
-                        const session = JSON.parse(sessionStr);
-                        // 檢查是否超過設定的時間 (例如 2 小時)
-                        if (session.expire > new Date().getTime()) {
-                            this.loginContainer.style.display = 'none';
-                            this.onSuccess();
-                        } else {
-                            sessionStorage.removeItem('mockExamLogin');
-                        }
-                    } catch (e) {
-                        sessionStorage.removeItem('mockExamLogin');
-                    }
-                }
-            }
-
-            attachEventListeners() {
-                this.loginBtn.addEventListener('click', () => this.handleLogin());
-                this.userPwInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') this.handleLogin();
-                });
-                this.userIdInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') this.userPwInput.focus();
-                });
-            }
-
-            async handleLogin() {
-                const id = this.userIdInput.value.trim();
-                const pw = this.userPwInput.value.trim();
-
-                if (!id || !pw) {
-                    this.showError('請輸入完整帳號與密碼');
-                    return;
-                }
-
-                this.loginBtn.disabled = true;
-                this.loginBtn.textContent = '驗證中...';
-                this.loginError.style.display = 'none';
-
-                try {
-                    const response = await fetch('json/data.json');
-                    if (!response.ok) {
-                        throw new Error('無法取得驗證資料');
-                    }
-                    const users = await response.json();
-
-                    const user = users.find(u => u.id === id && u.pw === pw);
-                    if (user) {
-                        // 記錄登入狀態 (設定 2 小時不過期)
-                        const expireTime = new Date().getTime() + 2 * 60 * 60 * 1000;
-                        sessionStorage.setItem('mockExamLogin', JSON.stringify({ expire: expireTime }));
-
-                        this.loginContainer.style.display = 'none';
-                        this.onSuccess();
-                    } else {
-                        this.showError('帳號或密碼錯誤');
-                    }
-                } catch (error) {
-                    this.showError('無法讀取 json/data.json 進行驗證。<br>如果您是直接雙擊開啟網頁，請使用伺服器開啟以執行驗證。');
-                } finally {
-                    this.loginBtn.disabled = false;
-                    this.loginBtn.textContent = '登入';
-                }
-            }
-
-            showError(msg) {
-                this.loginError.innerHTML = msg;
-                this.loginError.style.display = 'block';
-            }
-        }
-
         // ----------------------------------------------------
         // 題數設定與抽題模組
         // ----------------------------------------------------
@@ -1255,45 +1144,41 @@
         // 系統進入點 - 流程控制
         // ----------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. 初始化登入流程
-            new LoginApp(() => {
+            // 顯示設定介面
+            const settingsEl = document.getElementById('settingsApp');
+            settingsEl.style.display = 'flex';
 
-                // 2. 登入成功，顯示設定介面
-                const settingsEl = document.getElementById('settingsApp');
-                settingsEl.style.display = 'flex';
+            const appEl = document.getElementById('app');
 
-                const appEl = document.getElementById('app');
+            // 初始化設定流程與選題頁面
+            const reviewApp = new ReviewApp(
+                // onStartReviewExam (開始複習模式)
+                (selectedQuestions) => {
+                    appEl.style.display = 'flex';
+                    new MockExamApp(selectedQuestions, true); // true = 複習模式
+                },
+                // onCancel (返回設定選單)
+                () => {
+                    settingsEl.style.display = 'flex';
+                }
+            );
 
-                // 初始化設定流程與選題頁面
-                const reviewApp = new ReviewApp(
-                    // onStartReviewExam (開始複習模式)
-                    (selectedQuestions) => {
-                        appEl.style.display = 'flex';
-                        new MockExamApp(selectedQuestions, true); // true = 複習模式
-                    },
-                    // onCancel (返回設定選單)
-                    () => {
-                        settingsEl.style.display = 'flex';
-                    }
-                );
-
-                new SettingsApp(
-                    // onStartExam (一般隨機測驗模式)
-                    (selectedQuestions) => {
-                        appEl.style.display = 'flex';
-                        new MockExamApp(selectedQuestions, false); // false = 一般題號隱藏模式
-                    },
-                    // onOpenReview (開啟複習介面)
-                    () => {
-                        reviewApp.loadAndShow();
-                    },
-                    // onStartSpecialExam (隨機測驗測試模式)
-                    (selectedQuestions) => {
-                        appEl.style.display = 'flex';
-                        new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true });
-                    }
-                );
-            });
+            new SettingsApp(
+                // onStartExam (一般隨機測驗模式)
+                (selectedQuestions) => {
+                    appEl.style.display = 'flex';
+                    new MockExamApp(selectedQuestions, false); // false = 一般題號隱藏模式
+                },
+                // onOpenReview (開啟複習介面)
+                () => {
+                    reviewApp.loadAndShow();
+                },
+                // onStartSpecialExam (隨機測驗測試模式)
+                (selectedQuestions) => {
+                    appEl.style.display = 'flex';
+                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true });
+                }
+            );
         });
     </script>
 </body>
