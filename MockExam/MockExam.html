@@ -1340,17 +1340,33 @@
         // 測驗功能模組
         // ----------------------------------------------------
         class MockExamApp {
-            constructor(questions, isReviewMode = false, options = {}) {
+            constructor(questions, isReviewMode = false, options = {}, onReturn) {
                 this.questions = questions;
                 this.isReviewMode = isReviewMode; // 如果是 true 則顯示「題號」以利對照複習
                 this.isSpecialMode = options.isSpecialMode || false;
                 this.hideDifficulty = options.hideDifficulty || false;
+                this.onReturn = onReturn;
                 this.currentIndex = 0;
                 this.appElement = document.getElementById('app');
                 this.answerShown = false;
 
                 // 儲存每個題目的使用者作答內容
                 this.userInputs = new Array(this.questions.length).fill('');
+
+                // 攔截瀏覽器上一頁行為
+                this.handlePopState = (e) => {
+                    const confirmLeave = confirm('確定要結束目前測驗返回設定嗎？作答紀錄將會遺失。');
+                    if (confirmLeave) {
+                        window.removeEventListener('popstate', this.handlePopState);
+                        this.appElement.style.display = 'none';
+                        if (this.onReturn) this.onReturn();
+                    } else {
+                        // 使用者按取消，重新 pushState 以維持目前狀態
+                        history.pushState({ page: 'exam' }, '', '');
+                    }
+                };
+                history.pushState({ page: 'exam' }, '', '');
+                window.addEventListener('popstate', this.handlePopState);
 
                 this.render();
             }
@@ -1376,7 +1392,12 @@
 
                 this.appElement.innerHTML = `
                     <div class="exam-header">
-                        <h1>MockExam ${this.isReviewMode ? '(複習模式)' : ''}</h1>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <button id="returnToSettingsBtn" style="background: none; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='none'" title="結束測驗並返回">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            </button>
+                            <h1>MockExam ${this.isReviewMode ? '(複習模式)' : ''}</h1>
+                        </div>
                         <div class="exam-meta">進度：${this.currentIndex + 1} / ${this.questions.length}</div>
                     </div>
                     <div class="progress-grid">
@@ -1431,6 +1452,19 @@
                 const toggleAnswerBtn = document.getElementById('toggleAnswerBtn');
                 const answerSection = document.getElementById('answerSection');
                 const answerInput = document.getElementById('answerInput');
+                const returnToSettingsBtn = document.getElementById('returnToSettingsBtn');
+
+                if (returnToSettingsBtn) {
+                    returnToSettingsBtn.addEventListener('click', () => {
+                        const confirmLeave = confirm('確定要結束目前測驗返回設定嗎？作答紀錄將會遺失。');
+                        if (confirmLeave) {
+                            window.removeEventListener('popstate', this.handlePopState);
+                            history.back(); // 移除 pushed 的 state
+                            this.appElement.style.display = 'none';
+                            if (this.onReturn) this.onReturn();
+                        }
+                    });
+                }
 
                 // 進度格點擊切換
                 const gridItems = document.querySelectorAll('.grid-item');
@@ -1529,12 +1563,17 @@
 
             const appEl = document.getElementById('app');
 
+            const backToSettings = () => {
+                appEl.style.display = 'none';
+                settingsEl.style.display = 'flex';
+            };
+
             // 初始化設定流程與選題頁面
             const reviewApp = new ReviewApp(
                 // onStartReviewExam (開始複習模式)
                 (selectedQuestions) => {
                     appEl.style.display = 'flex';
-                    new MockExamApp(selectedQuestions, true); // true = 複習模式
+                    new MockExamApp(selectedQuestions, true, {}, backToSettings); // true = 複習模式
                 },
                 // onCancel (返回設定選單)
                 () => {
@@ -1547,7 +1586,7 @@
                 // 產生測驗後，進入 MockExamApp
                 (selectedQuestions) => {
                     appEl.style.display = 'flex';
-                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true });
+                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true }, backToSettings);
                 },
                 // 返回設定
                 () => {
@@ -1559,7 +1598,7 @@
                 // onStartExam (一般隨機測驗模式)
                 (selectedQuestions) => {
                     appEl.style.display = 'flex';
-                    new MockExamApp(selectedQuestions, false); // false = 一般題號隱藏模式
+                    new MockExamApp(selectedQuestions, false, {}, backToSettings); // false = 一般題號隱藏模式
                 },
                 // onOpenReview (開啟複習介面)
                 () => {
