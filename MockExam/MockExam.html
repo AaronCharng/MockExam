@@ -534,6 +534,112 @@
                 padding: 12px 10px;
             }
         }
+
+        /* 特殊設定頁籤樣式 */
+        .tabs-container {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 15px;
+            background: #f8fafc;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-hover);
+            background: #edf2f7;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .special-review-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #edf2f7;
+            gap: 15px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+
+        .special-review-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .special-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 80px;
+        }
+
+        .special-option-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: var(--transition);
+        }
+        
+        .special-option-label:hover {
+            background: #edf2f7;
+        }
+
+        .special-option-label.checked-must {
+            background: #ebf8ff;
+            border-color: #63b3ed;
+            color: #2b6cb0;
+        }
+
+        .special-option-label.checked-exclude {
+            background: #fff5f5;
+            border-color: #fc8181;
+            color: #c53030;
+        }
+
+        .special-option-label input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        
+        .special-option-label input.cb-must {
+            accent-color: #3182ce;
+        }
+        
+        .special-option-label input.cb-exclude {
+            accent-color: #e53e3e;
+        }
     </style>
 </head>
 
@@ -563,7 +669,7 @@
             </div>
             <div id="settingsError" class="error-message" style="display: none;"></div>
             <button id="startExamBtn" class="btn btn-primary" style="width: 100%;">依設定開始隨機測驗</button>
-            <button id="specialTestBtn" class="btn" style="width: 100%; margin-top: 10px; background-color: #ffffff; color: #f4f6f8; border-color: #f4f6f8; outline: none;">隨機測驗測試</button>
+            <button id="specialTestBtn" class="btn" style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">進階配題測驗</button>
             <div style="position: relative; text-align: center; margin: 15px 0;">
                 <hr style="border: none; border-top: 1px solid #e2e8f0;">
                 <span
@@ -605,6 +711,34 @@
             </div>
             <div class="review-list" id="reviewListContainer" style="margin-bottom: 0;">
                 <!-- JS 動態生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 特殊測驗介面 -->
+    <div class="review-container" id="specialSetupApp" style="display: none;">
+        <div class="exam-header" style="background: linear-gradient(135deg, #38b2ac 0%, #319795 100%);">
+            <h1 style="font-size: 1.3rem;">特殊測驗設定</h1>
+            <div class="exam-meta" id="specialCountMeta">必考: 0 | 不考: 0</div>
+        </div>
+        
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="easy">容易</button>
+            <button class="tab-btn" data-tab="medium">中等</button>
+            <button class="tab-btn" data-tab="hard">困難</button>
+        </div>
+
+        <div class="exam-body" style="padding: 10px 30px 20px 30px; padding-top: 0;">
+            <div id="specialActionBtns" style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <button id="cancelSpecialBtn" class="btn" style="flex: 1;">返回設定</button>
+                <button id="startSpecialExamBtn" class="btn btn-primary"
+                    style="flex: 2; background-color: #319795; border-color: #319795;">以此條件開始測驗</button>
+            </div>
+            
+            <div class="review-list" style="margin-bottom: 0;">
+                <div id="tab-easy" class="tab-content active"></div>
+                <div id="tab-medium" class="tab-content"></div>
+                <div id="tab-hard" class="tab-content"></div>
             </div>
         </div>
     </div>
@@ -710,61 +844,25 @@
             }
 
             async handleSpecialStart() {
-                this.specialTestBtn.disabled = true;
-                this.specialTestBtn.textContent = '題庫載入中...';
+                const easyReq = parseInt(this.easyCountInput.value) || 0;
+                const mediumReq = parseInt(this.mediumCountInput.value) || 0;
+                const hardReq = parseInt(this.hardCountInput.value) || 0;
+
+                if (easyReq < 0 || easyReq > 36 || mediumReq < 0 || mediumReq > 36 || hardReq < 0 || hardReq > 18) {
+                    this.showError('請確認各難度題數沒有超出上限設定或小於零！');
+                    return;
+                }
+
+                if (easyReq + mediumReq + hardReq === 0) {
+                    this.showError('抽題總數不能為 0！');
+                    return;
+                }
+
+                // 將目前設定的題數帶給 onStartSpecialExam（這會負責開啟 SpecialSetupApp 介面）
                 this.settingsError.style.display = 'none';
-
-                try {
-                    const response = await fetch('json/exam.json');
-                    if (!response.ok) throw new Error('無法取得題庫資料');
-                    const allQuestions = await response.json();
-
-                    // 分類題庫
-                    const easyPool = allQuestions.filter(q => q.難度 === '易');
-                    const mediumPool = allQuestions.filter(q => q.難度 === '中');
-                    const hardPool = allQuestions.filter(q => q.難度 === '難' || (q.難度 !== '易' && q.難度 !== '中'));
-
-                    // 前25題：簡單區隨機 15 題，中等區固定 10 題
-                    const mediumFixedIds = [2, 4, 6, 7, 10, 13, 15, 16, 17, 18];
-                    
-                    const selectedEasy = this.shuffleArray(easyPool).slice(0, 15);
-                    const selectedMedium = mediumPool.filter(q => mediumFixedIds.includes(parseInt(q.題號)));
-                    
-                    if (selectedMedium.length < 10) {
-                         let remaining = 10 - selectedMedium.length;
-                         const remainingPool = mediumPool.filter(q => !mediumFixedIds.includes(parseInt(q.題號)));
-                         selectedMedium.push(...this.shuffleArray(remainingPool).slice(0, remaining));
-                    }
-                    
-                    const block1 = this.shuffleArray([...selectedEasy, ...selectedMedium]);
-
-                    // 後5題：困難區固定 4 題
-                    const hardFixedIds = [5, 7, 16, 18];
-                    const hardExcludeIds = [1, 2, 3, 4, 12];
-                    
-                    const selectedHardFixed = hardPool.filter(q => hardFixedIds.includes(parseInt(q.題號)));
-                    const remainingHardPool = hardPool.filter(q => !hardFixedIds.includes(parseInt(q.題號)) && !hardExcludeIds.includes(parseInt(q.題號)));
-                    
-                    const selectedHardRandom = this.shuffleArray(remainingHardPool).slice(0, 5 - selectedHardFixed.length);
-                    const block2 = this.shuffleArray([...selectedHardFixed, ...selectedHardRandom]);
-                    
-                    const finalPaper = [...block1, ...block2];
-
-                    if (finalPaper.length === 0) {
-                        this.showError('在目前題庫中找不到符合條件的題目。');
-                        return;
-                    }
-
-                    this.settingsContainer.style.display = 'none';
-                    if (this.onStartSpecialExam) {
-                        this.onStartSpecialExam(finalPaper);
-                    }
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    this.showError('無法讀取 json/exam.json 題庫。<br>請確認您的題庫檔案存在，並在伺服器環境下開啟。');
-                } finally {
-                    this.specialTestBtn.disabled = false;
-                    this.specialTestBtn.textContent = '隨機測驗測試';
+                this.settingsContainer.style.display = 'none';
+                if (this.onStartSpecialExam) {
+                    this.onStartSpecialExam({ easyReq, mediumReq, hardReq });
                 }
             }
 
@@ -954,6 +1052,287 @@
 
             updateCount() {
                 this.countMeta.textContent = `已選：${this.selectedIndexes.size} 題`;
+            }
+        }
+
+        // ----------------------------------------------------
+        // 特殊測驗挑選模組
+        // ----------------------------------------------------
+        class SpecialSetupApp {
+            constructor(onStartExam, onCancel) {
+                this.container = document.getElementById('specialSetupApp');
+                this.startBtn = document.getElementById('startSpecialExamBtn');
+                this.cancelBtn = document.getElementById('cancelSpecialBtn');
+                this.countMeta = document.getElementById('specialCountMeta');
+                
+                this.tabBtns = document.querySelectorAll('#specialSetupApp .tab-btn');
+                this.tabContents = document.querySelectorAll('#specialSetupApp .tab-content');
+
+                this.onStartExam = onStartExam;
+                this.onCancel = onCancel;
+
+                this.allQuestions = [];
+                // 儲存實際從 exam.json 的 original index 進行選取狀態的紀錄
+                this.preferences = { must: [], exclude: [] };
+                this.currentCounts = { easyReq: 15, mediumReq: 10, hardReq: 5 };
+
+                this.loadPreferences();
+                this.attachEventListeners();
+            }
+
+            loadPreferences() {
+                try {
+                    const saved = localStorage.getItem('mockExamPreferences');
+                    if (saved) {
+                        this.preferences = JSON.parse(saved);
+                    }
+                } catch (e) {
+                    console.error('Failed to load preferences from localStorage', e);
+                    this.preferences = { must: [], exclude: [] };
+                }
+            }
+
+            savePreferences() {
+                try {
+                    localStorage.setItem('mockExamPreferences', JSON.stringify(this.preferences));
+                } catch (e) {
+                    console.error('Failed to save preferences to localStorage', e);
+                }
+            }
+
+            attachEventListeners() {
+                this.cancelBtn.addEventListener('click', () => {
+                    this.container.style.display = 'none';
+                    this.onCancel();
+                });
+
+                this.startBtn.addEventListener('click', () => {
+                    this.generateExam();
+                });
+
+                this.tabBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        // 移除所有 active
+                        this.tabBtns.forEach(b => b.classList.remove('active'));
+                        this.tabContents.forEach(c => c.classList.remove('active'));
+                        
+                        // 加上 active
+                        const targetTab = e.target.getAttribute('data-tab');
+                        e.target.classList.add('active');
+                        document.getElementById('tab-' + targetTab).classList.add('active');
+                    });
+                });
+            }
+
+            async loadAndShow(counts) {
+                this.currentCounts = counts;
+                this.container.style.display = 'flex';
+                this.updateCount();
+
+                document.getElementById('tab-easy').innerHTML = '<div style="padding: 20px; text-align: center;">載入中...</div>';
+                document.getElementById('tab-medium').innerHTML = '<div style="padding: 20px; text-align: center;">載入中...</div>';
+                document.getElementById('tab-hard').innerHTML = '<div style="padding: 20px; text-align: center;">載入中...</div>';
+
+                try {
+                    const response = await fetch('json/exam.json');
+                    if (!response.ok) throw new Error('無法取得題庫資料');
+                    let qs = await response.json();
+                    
+                    // 保留原本的 idx 作為識別碼
+                    this.allQuestions = qs.map((q, idx) => ({ ...q, originalIndex: idx }));
+
+                    this.renderLists();
+                } catch (error) {
+                    document.getElementById('tab-easy').innerHTML = '<div style="color: #e53e3e; padding: 20px;">載入失敗</div>';
+                    document.getElementById('tab-medium').innerHTML = '<div style="color: #e53e3e; padding: 20px;">載入失敗</div>';
+                    document.getElementById('tab-hard').innerHTML = '<div style="color: #e53e3e; padding: 20px;">載入失敗</div>';
+                }
+            }
+
+            renderLists() {
+                const easyQs = this.allQuestions.filter(q => q.難度 === '易');
+                const mediumQs = this.allQuestions.filter(q => q.難度 === '中');
+                const hardQs = this.allQuestions.filter(q => q.難度 === '難' || (q.難度 !== '易' && q.難度 !== '中'));
+
+                const sortFn = (a, b) => parseInt(a.題號 || 0) - parseInt(b.題號 || 0);
+                easyQs.sort(sortFn);
+                mediumQs.sort(sortFn);
+                hardQs.sort(sortFn);
+
+                document.getElementById('tab-easy').innerHTML = this.buildHtmlList(easyQs);
+                document.getElementById('tab-medium').innerHTML = this.buildHtmlList(mediumQs);
+                document.getElementById('tab-hard').innerHTML = this.buildHtmlList(hardQs);
+
+                this.bindCheckboxEvents();
+            }
+
+            buildHtmlList(questions) {
+                if (questions.length === 0) return '<div style="padding: 20px; text-align: center;">無題目</div>';
+
+                let html = '';
+                questions.forEach(q => {
+                    const idx = q.originalIndex;
+                    const isMust = this.preferences.must.includes(idx);
+                    const isExclude = this.preferences.exclude.includes(idx);
+
+                    html += `
+                        <div class="special-review-item">
+                            <div class="special-review-item-content">
+                                <div class="review-item-meta">
+                                    <span class="difficulty-badge" style="padding: 2px 8px; font-size: 0.75rem;">${q.難度 || '未知'}</span>
+                                    <span class="question-id" style="padding: 2px 8px; font-size: 0.75rem;">題號：${q.題號 || '未知'}</span>
+                                </div>
+                                <div class="review-item-text">${q.問題 ? q.問題.substring(0, 150) + (q.問題.length > 150 ? '...' : '') : '無題目內容'}</div>
+                            </div>
+                            <div class="special-options">
+                                <label class="special-option-label ${isMust ? 'checked-must' : ''}" id="lbl-must-${idx}">
+                                    <input type="checkbox" class="cb-must" data-idx="${idx}" ${isMust ? 'checked' : ''}> 必考
+                                </label>
+                                <label class="special-option-label ${isExclude ? 'checked-exclude' : ''}" id="lbl-exclude-${idx}">
+                                    <input type="checkbox" class="cb-exclude" data-idx="${idx}" ${isExclude ? 'checked' : ''}> 不考
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                });
+                return html;
+            }
+
+            bindCheckboxEvents() {
+                const mustCbs = this.container.querySelectorAll('.cb-must');
+                const excludeCbs = this.container.querySelectorAll('.cb-exclude');
+
+                mustCbs.forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        const idx = parseInt(e.target.getAttribute('data-idx'));
+                        if (e.target.checked) {
+                            // 新增必考，確保從不考移除
+                            if (!this.preferences.must.includes(idx)) this.preferences.must.push(idx);
+                            this.preferences.exclude = this.preferences.exclude.filter(id => id !== idx);
+                            
+                            // 更新畫面其他 checkbox
+                            const exCb = this.container.querySelector(`.cb-exclude[data-idx="${idx}"]`);
+                            if (exCb) exCb.checked = false;
+                        } else {
+                            this.preferences.must = this.preferences.must.filter(id => id !== idx);
+                        }
+                        this.updateLabelStyles(idx);
+                        this.savePreferences();
+                        this.updateCount();
+                    });
+                });
+
+                excludeCbs.forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        const idx = parseInt(e.target.getAttribute('data-idx'));
+                        if (e.target.checked) {
+                            // 新增不考，確保從必考移除
+                            if (!this.preferences.exclude.includes(idx)) this.preferences.exclude.push(idx);
+                            this.preferences.must = this.preferences.must.filter(id => id !== idx);
+                            
+                            // 更新畫面其他 checkbox
+                            const mustCb = this.container.querySelector(`.cb-must[data-idx="${idx}"]`);
+                            if (mustCb) mustCb.checked = false;
+                        } else {
+                            this.preferences.exclude = this.preferences.exclude.filter(id => id !== idx);
+                        }
+                        this.updateLabelStyles(idx);
+                        this.savePreferences();
+                        this.updateCount();
+                    });
+                });
+            }
+
+            updateLabelStyles(idx) {
+                const isMust = this.preferences.must.includes(idx);
+                const isExclude = this.preferences.exclude.includes(idx);
+                
+                const lblMust = document.getElementById(`lbl-must-${idx}`);
+                const lblExclude = document.getElementById(`lbl-exclude-${idx}`);
+                
+                if (lblMust) {
+                    if (isMust) lblMust.classList.add('checked-must');
+                    else lblMust.classList.remove('checked-must');
+                }
+                
+                if (lblExclude) {
+                    if (isExclude) lblExclude.classList.add('checked-exclude');
+                    else lblExclude.classList.remove('checked-exclude');
+                }
+            }
+
+            updateCount() {
+                this.countMeta.textContent = `必考: ${this.preferences.must.length} | 不考: ${this.preferences.exclude.length}`;
+            }
+
+            shuffleArray(array) {
+                const arr = [...array];
+                let currentIndex = arr.length, randomIndex;
+                while (currentIndex !== 0) {
+                    randomIndex = Math.floor(Math.random() * currentIndex);
+                    currentIndex--;
+                    [arr[currentIndex], arr[randomIndex]] = [arr[randomIndex], arr[currentIndex]];
+                }
+                return arr;
+            }
+
+            generateExam() {
+                // 選項 A：維持首頁題數，優先提取必考題，補齊剩餘名額，去除不考題
+                const easyPool = this.allQuestions.filter(q => q.難度 === '易');
+                const mediumPool = this.allQuestions.filter(q => q.難度 === '中');
+                const hardPool = this.allQuestions.filter(q => q.難度 === '難' || (q.難度 !== '易' && q.難度 !== '中'));
+
+                const generateForDifficulty = (pool, limit) => {
+                    if (limit === 0) return [];
+                    
+                    // 分解當前難度的題目為: 必考, 不考, 可抽
+                    const poolMust = [];
+                    const poolAvailable = [];
+                    
+                    pool.forEach(q => {
+                        const isMust = this.preferences.must.includes(q.originalIndex);
+                        const isExclude = this.preferences.exclude.includes(q.originalIndex);
+                        
+                        if (isMust) {
+                            poolMust.push(q);
+                        } else if (!isExclude) {
+                            poolAvailable.push(q);
+                        }
+                    });
+                    
+                    // 打亂必考題（以防必考數量大於 limit，雖然通常不該發生）
+                    const shuffledMust = this.shuffleArray(poolMust);
+                    const selectedMust = shuffledMust.slice(0, limit);
+                    
+                    // 如果必考題已經超過或等於限制，就直接回傳
+                    if (selectedMust.length >= limit) {
+                        return selectedMust;
+                    }
+                    
+                    // 計算還需要幾題
+                    const remainingLimit = limit - selectedMust.length;
+                    
+                    // 從可用題庫隨機抽取
+                    const shuffledAvailable = this.shuffleArray(poolAvailable);
+                    const selectedAvailable = shuffledAvailable.slice(0, remainingLimit);
+                    
+                    // 合併並打亂順序
+                    return this.shuffleArray([...selectedMust, ...selectedAvailable]);
+                };
+
+                const finalEasy = generateForDifficulty(easyPool, this.currentCounts.easyReq);
+                const finalMedium = generateForDifficulty(mediumPool, this.currentCounts.mediumReq);
+                const finalHard = generateForDifficulty(hardPool, this.currentCounts.hardReq);
+
+                const finalPaper = this.shuffleArray([...finalEasy, ...finalMedium, ...finalHard]);
+                
+                if (finalPaper.length === 0) {
+                    alert('沒有題目可以產生！請檢查題數條件或不考比例。');
+                    return;
+                }
+
+                this.container.style.display = 'none';
+                this.onStartExam(finalPaper);
             }
         }
 
@@ -1163,6 +1542,19 @@
                 }
             );
 
+            // 準備 SpecialSetupApp
+            const specialApp = new SpecialSetupApp(
+                // 產生測驗後，進入 MockExamApp
+                (selectedQuestions) => {
+                    appEl.style.display = 'flex';
+                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true });
+                },
+                // 返回設定
+                () => {
+                    settingsEl.style.display = 'flex';
+                }
+            );
+
             new SettingsApp(
                 // onStartExam (一般隨機測驗模式)
                 (selectedQuestions) => {
@@ -1173,10 +1565,9 @@
                 () => {
                     reviewApp.loadAndShow();
                 },
-                // onStartSpecialExam (隨機測驗測試模式)
-                (selectedQuestions) => {
-                    appEl.style.display = 'flex';
-                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true });
+                // onStartSpecialExam (隨機測驗測試模式 - 改為開啟選單)
+                (counts) => {
+                    specialApp.loadAndShow(counts);
                 }
             );
         });
