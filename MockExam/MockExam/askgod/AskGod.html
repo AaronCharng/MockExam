@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文昌帝君求籤</title>
+    <style>
+        :root {
+            --bg-color: #fffaf0;
+            --text-main: #4a3b32;
+            --text-muted: #826b5d;
+            --primary: #e53e3e;
+            --primary-hover: #c53030;
+            --secondary: #ecc94b;
+            --secondary-hover: #d69e2e;
+            --card-bg: #ffffff;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(135deg, #fffaf0 0%, #fefcbf 100%);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 600px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease-out;
+            border-top: 6px solid var(--primary);
+        }
+
+        @keyframes fadeIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .hero-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+            max-height: 350px;
+        }
+
+        .content-body {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .status-text {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            font-weight: 600;
+            color: #2d3748;
+            background-color: #fff5f5;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 1px solid #fed7d7;
+            width: 100%;
+        }
+
+        .lot-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-hover);
+            margin-top: 10px;
+            display: none;
+        }
+
+        .cup-display {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            display: none;
+            margin: 15px 0;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .btn {
+            background-color: white;
+            border: 2px solid #cbd5e0;
+            color: var(--text-main);
+            padding: 12px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 700;
+            transition: var(--transition);
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 6px rgba(229, 62, 62, 0.25);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: #744210;
+            border-color: var(--secondary);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--secondary-hover);
+            border-color: var(--secondary-hover);
+        }
+
+        .result-section {
+            width: 100%;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            padding: 20px;
+            background-color: #fafbfc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: left;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .result-title {
+            color: var(--primary-hover);
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-bottom: 2px solid #fed7d7;
+            padding-bottom: 8px;
+            margin-bottom: 5px;
+        }
+
+        .result-text {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            white-space: pre-line;
+            color: #2d3748;
+        }
+
+        .footer-controls {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            margin-top: 15px;
+            border-top: 1px solid #edf2f7;
+            padding-top: 20px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            z-index: 1000;
+        }
+
+        @media (max-width: 600px) {
+            .content-body {
+                padding: 20px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+            }
+
+            .footer-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loading" class="loading-overlay">載入題庫中...</div>
+
+    <div class="container" style="display: none;" id="appContainer">
+        <!-- 上方圖片 -->
+        <img id="heroImage" src="pics/Modern_wenchang.png" alt="文昌帝君" class="hero-image"
+            onerror="this.src=''; this.alt='圖片載入失敗';">
+
+        <div class="content-body">
+            <div class="title-container" style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px; width: 100%;">
+                <button id="prevDeityBtn" class="btn" style="padding: 5px; border-radius: 50%; font-size: 1.2rem; width: 40px; height: 40px; border: none; background-color: #f7fafc; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">&lt;</button>
+                <h1 id="deityTitle" style="margin-bottom: 0;">文昌帝君 賜籤</h1>
+                <button id="nextDeityBtn" class="btn" style="padding: 5px; border-radius: 50%; font-size: 1.2rem; width: 40px; height: 40px; border: none; background-color: #f7fafc; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">&gt;</button>
+            </div>
+
+            <!-- 籤號顯示 -->
+            <div id="lotIdDisplay" class="lot-display"></div>
+
+            <!-- 狀態文字 -->
+            <div id="statusText" class="status-text">
+                需連續擲出三次【 聖盃 】才是靈簽，請點上面的【 求籤 】開始抽籤！
+            </div>
+
+            <!-- 擲筊圖片顯示 -->
+            <img id="cupImage" class="cup-display" src="" alt="擲筊結果">
+
+            <!-- 動作按鈕 -->
+            <button id="actionBtn" class="btn btn-primary" onclick="handleAction()">求籤</button>
+
+            <!-- 解籤結果 -->
+            <div id="resultSection" class="result-section">
+                <div class="result-title" id="resultLotName"></div>
+                <div class="result-title" style="font-size: 1.1rem; color: #4a5568;">詩曰</div>
+                <div class="result-text" id="resultPoem"></div>
+                <div class="result-title" style="font-size: 1.1rem; color: #4a5568; margin-top: 10px;">解析</div>
+                <div class="result-text" id="resultExplain"></div>
+            </div>
+
+            <!-- 下方按鈕區塊 -->
+            <div class="footer-controls">
+                <button class="btn" style="flex: 1;" onclick="resetApp();">重新求籤</button>
+                <button class="btn btn-secondary" style="flex: 1;"
+                    onclick="window.location.href='../MockExam.html';">進入模擬考</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const deities = [
+            { id: 'wenchang', name: '文昌帝君', title: '文昌帝君 賜籤', image: 'pics/Modern_wenchang.png', dataFile: 'lotsdata/wenchang_lots.json' },
+            { id: 'yuelao', name: '月老', title: '月老 賜籤', image: 'pics/Modern_yuelao.png', dataFile: 'lotsdata/yuelao_lots.json' },
+            { id: 'guanyu', name: '關聖帝君', title: '關聖帝君 賜籤', image: 'pics/Modern_guanyu.png', dataFile: 'lotsdata/guanyu_lots.json' }
+        ];
+        let currentDeityIndex = 0;
+
+        let lotsData = [];
+        let currentLot = null;
+        let baseRate = 0.4;
+        let failCount = 0;
+        let comboCount = 0;
+        let appState = 'INIT'; // 可為 INIT, CASTING, FINISHED
+
+        const els = {
+            loading: document.getElementById('loading'),
+            appContainer: document.getElementById('appContainer'),
+            statusText: document.getElementById('statusText'),
+            actionBtn: document.getElementById('actionBtn'),
+            lotIdDisplay: document.getElementById('lotIdDisplay'),
+            cupImage: document.getElementById('cupImage'),
+            resultSection: document.getElementById('resultSection'),
+            resultLotName: document.getElementById('resultLotName'),
+            resultPoem: document.getElementById('resultPoem'),
+            resultExplain: document.getElementById('resultExplain'),
+            heroImage: document.getElementById('heroImage'),
+            deityTitle: document.getElementById('deityTitle'),
+            prevDeityBtn: document.getElementById('prevDeityBtn'),
+            nextDeityBtn: document.getElementById('nextDeityBtn')
+        };
+
+        function resetApp() {
+            appState = 'INIT';
+            currentLot = null;
+            failCount = 0;
+            comboCount = 0;
+            baseRate = 0.4; // 重置基礎機率
+
+            els.lotIdDisplay.style.display = 'none';
+            els.lotIdDisplay.style.color = 'var(--primary-hover)';
+            els.cupImage.style.display = 'none';
+            els.resultSection.style.display = 'none';
+            
+            els.statusText.textContent = "需連續擲出三次【 聖盃 】才是靈簽，請點上面的【 求籤 】開始抽籤！";
+            els.statusText.style.backgroundColor = '#fff5f5';
+            els.statusText.style.borderColor = '#fed7d7';
+            els.statusText.style.color = '#2d3748';
+
+            els.actionBtn.textContent = '求籤';
+            els.actionBtn.classList.remove('btn-secondary');
+            els.actionBtn.classList.add('btn-primary');
+            els.actionBtn.style.display = 'flex';
+            els.actionBtn.disabled = false;
+        }
+
+        // 初始化
+        async function fetchLots() {
+            try {
+                els.loading.style.display = 'flex';
+                els.appContainer.style.display = 'none';
+                els.loading.textContent = '載入題庫中...';
+
+                const deity = deities[currentDeityIndex];
+                
+                els.deityTitle.textContent = deity.title;
+                els.heroImage.src = deity.image;
+                els.heroImage.alt = deity.name;
+                document.title = deity.name + '求籤';
+
+                const response = await fetch(deity.dataFile);
+                if (!response.ok) throw new Error('無法取得籤詩資料');
+                lotsData = await response.json();
+
+                els.loading.style.display = 'none';
+                els.appContainer.style.display = 'flex';
+                
+                resetApp();
+            } catch (error) {
+                console.error(error);
+                els.loading.innerHTML = '無法載入資料。<br>請確認是否使用伺服器環境開啟。';
+            }
+        }
+
+        function changeDeity(direction) {
+            currentDeityIndex += direction;
+            if (currentDeityIndex < 0) currentDeityIndex = deities.length - 1;
+            if (currentDeityIndex >= deities.length) currentDeityIndex = 0;
+            fetchLots();
+        }
+
+        // 當按下主要按鈕 (求籤 / 擲茭)
+        function handleAction() {
+            if (appState === 'INIT') {
+                drawLot();
+            } else if (appState === 'CASTING') {
+                castCup();
+            }
+        }
+
+        // 抽籤動作
+        function drawLot() {
+            if (!lotsData || lotsData.length === 0) return;
+
+            // 隨機抽籤
+            const randomIndex = Math.floor(Math.random() * lotsData.length);
+            currentLot = lotsData[randomIndex];
+
+            // 更新 UI 狀態
+            els.lotIdDisplay.textContent = currentLot['籤號'];
+            els.lotIdDisplay.style.display = 'block';
+
+            els.statusText.textContent = "需連續擲出三次【 聖盃 】才是靈簽，請點上面擲茭！";
+            els.statusText.style.backgroundColor = '#fff5f5';
+            els.statusText.style.borderColor = '#fed7d7';
+            els.statusText.style.color = '#2d3748';
+
+            els.actionBtn.textContent = '擲茭';
+            els.actionBtn.classList.remove('btn-primary');
+            els.actionBtn.classList.add('btn-secondary'); // 改變按鈕風格
+
+            els.cupImage.style.display = 'none';
+            els.resultSection.style.display = 'none';
+            comboCount = 0;
+            appState = 'CASTING';
+        }
+
+        // 擲筊動作
+        function castCup() {
+            // 在動畫表現前稍微停頓，營造抽籤感
+            els.actionBtn.disabled = true;
+
+            // 使用 setTimeout 創造簡單節奏感
+            setTimeout(() => {
+                // 當前機率計算
+                let currentRate = baseRate;
+                if (failCount >= 5) {
+                    currentRate += (failCount - 4) * 0.05;
+                }
+                if (comboCount === 1) currentRate += 0.10;
+                else if (comboCount === 2) currentRate += 0.20;
+
+                if (currentRate > 1) currentRate = 1.0;
+
+                const rng = Math.random();
+
+                // 為了重啟動畫，先將圖示隱藏再顯示
+                els.cupImage.style.display = 'none';
+                void els.cupImage.offsetWidth; // 強制瀏覽器重繪 (Reflow) 讓動畫能重新觸發
+                els.cupImage.style.display = 'block';
+
+                if (rng <= currentRate) {
+                    // 聖杯
+                    comboCount++;
+                    els.cupImage.src = 'pics/GodSayYes.png';
+
+                    if (comboCount >= 3) {
+                        failCount = 0;
+                        comboCount = 0;
+                        finishSuccess();
+                    } else {
+                        els.statusText.textContent = `需連續擲出三次【 聖盃 】才是靈簽，目前你已擲出 ${comboCount} 次`;
+                        els.statusText.style.backgroundColor = '#f0fff4';
+                        els.statusText.style.borderColor = '#c6f6d5';
+                        els.actionBtn.disabled = false;
+                    }
+                } else {
+                    // 笑杯或無杯
+                    failCount++;
+                    comboCount = 0;
+
+                    if (Math.random() < 0.5) {
+                        els.cupImage.src = 'pics/GodHaHa.png';
+                        failCasting('笑杯');
+                    } else {
+                        els.cupImage.src = 'pics/GodSayNo.png';
+                        failCasting('無杯');
+                    }
+                }
+            }, 100);
+        }
+
+        function failCasting(cupName) {
+            comboCount = 0;
+            els.statusText.textContent = `您擲出了【 ${cupName} 】，此簽不准，請重新抽籤！`;
+            els.statusText.style.backgroundColor = '#fff5f5';
+            els.statusText.style.borderColor = '#fc8181';
+            els.statusText.style.color = '#c53030';
+
+            els.lotIdDisplay.style.color = '#a0aec0'; // 將原籤號反灰代表失敗
+
+            els.actionBtn.textContent = '求籤';
+            els.actionBtn.classList.remove('btn-secondary');
+            els.actionBtn.classList.add('btn-primary');
+            els.actionBtn.disabled = false;
+
+            appState = 'INIT';
+        }
+
+        function finishSuccess() {
+            els.statusText.textContent = `太棒了！已連續擲出三次【 聖盃 】，此為您的專屬靈籤。`;
+            els.statusText.style.backgroundColor = '#ebf8ff';
+            els.statusText.style.borderColor = '#90cdf4';
+            els.statusText.style.color = '#2b6cb0';
+
+            els.actionBtn.style.display = 'none'; // 隱藏動作按鈕
+
+            // 顯示解籤內容
+            els.resultLotName.textContent = currentLot['籤號'];
+            els.resultPoem.textContent = currentLot['詩曰'];
+            els.resultExplain.textContent = currentLot['解析'] || '(暫無解析)';
+            els.resultSection.style.display = 'flex';
+
+            appState = 'FINISHED';
+        }
+
+        // 啟動程式
+        window.addEventListener('DOMContentLoaded', () => {
+            els.prevDeityBtn.addEventListener('click', () => changeDeity(-1));
+            els.nextDeityBtn.addEventListener('click', () => changeDeity(1));
+            fetchLots();
+        });
+
+    </script>
+</body>
+
+</html>
