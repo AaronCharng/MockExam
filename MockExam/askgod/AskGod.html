@@ -252,11 +252,15 @@
 
     <div class="container" style="display: none;" id="appContainer">
         <!-- 上方圖片 -->
-        <img src="pics/Modern_wenchang.png" alt="文昌帝君" class="hero-image"
-            onerror="this.src=''; this.alt='圖片載入失敗 (pics/Modern_wenchang.png)';">
+        <img id="heroImage" src="pics/Modern_wenchang.png" alt="文昌帝君" class="hero-image"
+            onerror="this.src=''; this.alt='圖片載入失敗';">
 
         <div class="content-body">
-            <h1>文昌帝君 賜籤</h1>
+            <div class="title-container" style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px; width: 100%;">
+                <button id="prevDeityBtn" class="btn" style="padding: 5px; border-radius: 50%; font-size: 1.2rem; width: 40px; height: 40px; border: none; background-color: #f7fafc; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">&lt;</button>
+                <h1 id="deityTitle" style="margin-bottom: 0;">文昌帝君 賜籤</h1>
+                <button id="nextDeityBtn" class="btn" style="padding: 5px; border-radius: 50%; font-size: 1.2rem; width: 40px; height: 40px; border: none; background-color: #f7fafc; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">&gt;</button>
+            </div>
 
             <!-- 籤號顯示 -->
             <div id="lotIdDisplay" class="lot-display"></div>
@@ -283,7 +287,7 @@
 
             <!-- 下方按鈕區塊 -->
             <div class="footer-controls">
-                <button class="btn" style="flex: 1;" onclick="location.reload();">重新求籤</button>
+                <button class="btn" style="flex: 1;" onclick="resetApp();">重新求籤</button>
                 <button class="btn btn-secondary" style="flex: 1;"
                     onclick="window.location.href='../MockExam.html';">進入模擬考</button>
             </div>
@@ -291,6 +295,13 @@
     </div>
 
     <script>
+        const deities = [
+            { id: 'wenchang', name: '文昌帝君', title: '文昌帝君 賜籤', image: 'pics/Modern_wenchang.png', dataFile: 'lotsdata/wenchang_lots.json' },
+            { id: 'yuelao', name: '月老', title: '月老 賜籤', image: 'pics/Modern_yuelao.png', dataFile: 'lotsdata/yuelao_lots.json' },
+            { id: 'guanyu', name: '關聖帝君', title: '關聖帝君 賜籤', image: 'pics/Modern_guanyu.png', dataFile: 'lotsdata/guanyu_lots.json' }
+        ];
+        let currentDeityIndex = 0;
+
         let lotsData = [];
         let currentLot = null;
         let baseRate = 0.4;
@@ -308,22 +319,70 @@
             resultSection: document.getElementById('resultSection'),
             resultLotName: document.getElementById('resultLotName'),
             resultPoem: document.getElementById('resultPoem'),
-            resultExplain: document.getElementById('resultExplain')
+            resultExplain: document.getElementById('resultExplain'),
+            heroImage: document.getElementById('heroImage'),
+            deityTitle: document.getElementById('deityTitle'),
+            prevDeityBtn: document.getElementById('prevDeityBtn'),
+            nextDeityBtn: document.getElementById('nextDeityBtn')
         };
+
+        function resetApp() {
+            appState = 'INIT';
+            currentLot = null;
+            failCount = 0;
+            comboCount = 0;
+            baseRate = 0.4; // 重置基礎機率
+
+            els.lotIdDisplay.style.display = 'none';
+            els.lotIdDisplay.style.color = 'var(--primary-hover)';
+            els.cupImage.style.display = 'none';
+            els.resultSection.style.display = 'none';
+            
+            els.statusText.textContent = "需連續擲出三次【 聖盃 】才是靈簽，請點上面的【 求籤 】開始抽籤！";
+            els.statusText.style.backgroundColor = '#fff5f5';
+            els.statusText.style.borderColor = '#fed7d7';
+            els.statusText.style.color = '#2d3748';
+
+            els.actionBtn.textContent = '求籤';
+            els.actionBtn.classList.remove('btn-secondary');
+            els.actionBtn.classList.add('btn-primary');
+            els.actionBtn.style.display = 'flex';
+            els.actionBtn.disabled = false;
+        }
 
         // 初始化
         async function fetchLots() {
             try {
-                const response = await fetch('lotsdata/wenchang_lots.json');
+                els.loading.style.display = 'flex';
+                els.appContainer.style.display = 'none';
+                els.loading.textContent = '載入題庫中...';
+
+                const deity = deities[currentDeityIndex];
+                
+                els.deityTitle.textContent = deity.title;
+                els.heroImage.src = deity.image;
+                els.heroImage.alt = deity.name;
+                document.title = deity.name + '求籤';
+
+                const response = await fetch(deity.dataFile);
                 if (!response.ok) throw new Error('無法取得籤詩資料');
                 lotsData = await response.json();
 
                 els.loading.style.display = 'none';
                 els.appContainer.style.display = 'flex';
+                
+                resetApp();
             } catch (error) {
                 console.error(error);
-                els.loading.innerHTML = '無法載入 lotsdata/wenchang_lots.json 資料。<br>請確認是否使用伺服器環境開啟。';
+                els.loading.innerHTML = '無法載入資料。<br>請確認是否使用伺服器環境開啟。';
             }
+        }
+
+        function changeDeity(direction) {
+            currentDeityIndex += direction;
+            if (currentDeityIndex < 0) currentDeityIndex = deities.length - 1;
+            if (currentDeityIndex >= deities.length) currentDeityIndex = 0;
+            fetchLots();
         }
 
         // 當按下主要按鈕 (求籤 / 擲茭)
@@ -452,7 +511,11 @@
         }
 
         // 啟動程式
-        window.addEventListener('DOMContentLoaded', fetchLots);
+        window.addEventListener('DOMContentLoaded', () => {
+            els.prevDeityBtn.addEventListener('click', () => changeDeity(-1));
+            els.nextDeityBtn.addEventListener('click', () => changeDeity(1));
+            fetchLots();
+        });
 
     </script>
 </body>
