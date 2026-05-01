@@ -677,6 +677,8 @@
                 style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">進階配題測驗</button>
             <button id="similarTestBtn" class="btn"
                 style="width: 100%; margin-top: 10px; background-color: #ebf8ff; color: #2b6cb0; border-color: #90cdf4; outline: none;">相似題目比較</button>
+            <button id="andOrTestBtn" class="btn"
+                style="width: 100%; margin-top: 10px; background-color: #fffaf0; color: #dd6b20; border-color: #fbd38d; outline: none;">「及 or 與」加強</button>
             <div style="position: relative; text-align: center; margin: 15px 0;">
                 <hr style="border: none; border-top: 1px solid #e2e8f0;">
                 <span
@@ -760,7 +762,7 @@
         // 題數設定與抽題模組
         // ----------------------------------------------------
         class SettingsApp {
-            constructor(onStartExam, onOpenReview, onStartSpecialExam, onStartSimilarExam) {
+            constructor(onStartExam, onOpenReview, onStartSpecialExam, onStartSimilarExam, onStartAndOrExam) {
                 this.settingsContainer = document.getElementById('settingsApp');
                 this.easyCountInput = document.getElementById('easyCount');
                 this.mediumCountInput = document.getElementById('mediumCount');
@@ -768,6 +770,7 @@
                 this.startExamBtn = document.getElementById('startExamBtn');
                 this.specialTestBtn = document.getElementById('specialTestBtn');
                 this.similarTestBtn = document.getElementById('similarTestBtn');
+                this.andOrTestBtn = document.getElementById('andOrTestBtn');
                 this.openReviewBtn = document.getElementById('openReviewBtn');
                 this.settingsError = document.getElementById('settingsError');
 
@@ -775,6 +778,7 @@
                 this.onOpenReview = onOpenReview;
                 this.onStartSpecialExam = onStartSpecialExam;
                 this.onStartSimilarExam = onStartSimilarExam;
+                this.onStartAndOrExam = onStartAndOrExam;
 
                 this.attachEventListeners();
             }
@@ -795,6 +799,10 @@
 
                 if (this.similarTestBtn) {
                     this.similarTestBtn.addEventListener('click', () => this.handleSimilarStart());
+                }
+
+                if (this.andOrTestBtn) {
+                    this.andOrTestBtn.addEventListener('click', () => this.handleAndOrStart());
                 }
             }
 
@@ -935,6 +943,50 @@
                     if (this.similarTestBtn) {
                         this.similarTestBtn.disabled = false;
                         this.similarTestBtn.textContent = '相似題目比較';
+                    }
+                }
+            }
+
+            async handleAndOrStart() {
+                if (this.andOrTestBtn) {
+                    this.andOrTestBtn.disabled = true;
+                    this.andOrTestBtn.textContent = '題庫載入與分析中...';
+                }
+                this.settingsError.style.display = 'none';
+
+                try {
+                    const response = await fetch('json/exam.json');
+                    if (!response.ok) throw new Error('無法取得題庫資料');
+                    const allQuestions = await response.json();
+
+                    // 找出答案中包含「及」或「與」的題目
+                    const filteredQuestions = allQuestions.filter(q => q.答案 && (q.答案.includes('及') || q.答案.includes('與')));
+                    
+                    if (filteredQuestions.length === 0) {
+                        this.showError('題庫中找不到答案包含「及」或「與」的題目！');
+                        return;
+                    }
+
+                    // 依照題號排序
+                    const finalPaper = filteredQuestions.sort((a, b) => {
+                        const idA = parseInt(a.題號 || 0);
+                        const idB = parseInt(b.題號 || 0);
+                        return idA - idB;
+                    });
+
+                    this.settingsContainer.style.display = 'none';
+                    if (this.onStartAndOrExam) {
+                        this.onStartAndOrExam(finalPaper);
+                    } else {
+                        this.onStartExam(finalPaper);
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    this.showError('無法讀取或分析題庫資料。');
+                } finally {
+                    if (this.andOrTestBtn) {
+                        this.andOrTestBtn.disabled = false;
+                        this.andOrTestBtn.textContent = '「及 or 與」加強';
                     }
                 }
             }
@@ -1458,6 +1510,7 @@
                 this.isReviewMode = isReviewMode; // 如果是 true 則顯示「題號」以利對照複習
                 this.isSpecialMode = options.isSpecialMode || false;
                 this.hideDifficulty = options.hideDifficulty || false;
+                this.isAndOrMode = options.isAndOrMode || false;
                 this.onReturn = onReturn;
                 this.currentIndex = 0;
                 this.appElement = document.getElementById('app');
@@ -1523,19 +1576,21 @@
                         ${gridHtml}
                     </div>
                     <div class="exam-body">
-                        <div class="question-meta" ${this.hideDifficulty && !this.isReviewMode ? 'style="display: none;"' : ''}>
+                        <div class="question-meta" ${(this.hideDifficulty && !this.isReviewMode && !this.isAndOrMode) ? 'style="display: none;"' : ''}>
                             <span class="difficulty-badge" ${this.hideDifficulty ? 'style="display: none;"' : ''}>難度：${question.難度 || '未知'}</span>
-                            ${this.isReviewMode ? `<span class="question-id">題號：${question.題號 || '未知'}</span>` : ''}
+                            ${(this.isReviewMode || this.isAndOrMode) ? `<span class="question-id">題號：${question.題號 || '未知'}</span>` : ''}
                         </div>
                         <div class="question-text">
                             ${question.問題 ? question.問題.replace(/\n/g, '<br>') : '無題目內容'}
                         </div>
                         
+                        ${this.isAndOrMode ? '' : `
                         <div class="answer-input-container">
                             <textarea id="answerInput" placeholder="請在此輸入您的答案..."></textarea>
                         </div>
+                        `}
                         
-                        <div class="answer-section" id="answerSection">
+                        <div class="answer-section ${this.isAndOrMode ? 'show' : ''}" id="answerSection" ${this.isAndOrMode ? 'style="display: block; opacity: 1; transform: translateY(0);"' : ''}>
                             <div class="answer-title">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M22 11.08V12a10 10 10 0 1 1-5.93-9.14"></path>
@@ -1543,13 +1598,13 @@
                                 </svg>
                                 標準答案
                             </div>
-                            <div class="answer-text">${question.答案 ? question.答案.replace(/\n/g, '<br>') : '無答案內容'}</div>
+                            <div class="answer-text">${this.formatAnswer(question.答案)}</div>
                         </div>
                     </div>
                     <div class="exam-footer">
                         <button class="btn" id="prevBtn" ${this.currentIndex === 0 ? 'disabled' : ''}>上一題</button>
                         <div class="controls-right">
-                            <button class="btn btn-primary" id="toggleAnswerBtn">顯示答案</button>
+                            ${this.isAndOrMode ? '' : `<button class="btn btn-primary" id="toggleAnswerBtn">顯示答案</button>`}
                             <button class="btn" id="nextBtn" ${this.currentIndex === this.questions.length - 1 ? 'disabled' : ''}>下一題</button>
                         </div>
                     </div>
@@ -1563,6 +1618,15 @@
 
                 this.attachEventListeners();
                 this.answerShown = false;
+            }
+
+            formatAnswer(text) {
+                if (!text) return '無答案內容';
+                let formatted = text.replace(/\n/g, '<br>');
+                if (this.isAndOrMode) {
+                    formatted = formatted.replace(/([及與])/g, '<span style="font-size: 1.5em; font-weight: bold; color: red;">$1</span>');
+                }
+                return formatted;
             }
 
             attachEventListeners() {
@@ -1823,6 +1887,11 @@
                 (selectedQuestions) => {
                     appEl.style.display = 'flex';
                     new MockExamApp(selectedQuestions, false, { hideDifficulty: true }, backToSettings);
+                },
+                // onStartAndOrExam (及 or 與 加強模式)
+                (selectedQuestions) => {
+                    appEl.style.display = 'flex';
+                    new MockExamApp(selectedQuestions, false, { isAndOrMode: true }, backToSettings);
                 }
             );
         });
