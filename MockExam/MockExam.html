@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MockExam</title>
     <!-- docx & FileSaver CDNs for Word Export -->
@@ -674,6 +675,8 @@
             <button id="startExamBtn" class="btn btn-primary" style="width: 100%;">依設定開始隨機測驗</button>
             <button id="specialTestBtn" class="btn"
                 style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">進階配題測驗</button>
+            <button id="similarTestBtn" class="btn"
+                style="width: 100%; margin-top: 10px; background-color: #ebf8ff; color: #2b6cb0; border-color: #90cdf4; outline: none;">相似題目比較</button>
             <div style="position: relative; text-align: center; margin: 15px 0;">
                 <hr style="border: none; border-top: 1px solid #e2e8f0;">
                 <span
@@ -757,19 +760,21 @@
         // 題數設定與抽題模組
         // ----------------------------------------------------
         class SettingsApp {
-            constructor(onStartExam, onOpenReview, onStartSpecialExam) {
+            constructor(onStartExam, onOpenReview, onStartSpecialExam, onStartSimilarExam) {
                 this.settingsContainer = document.getElementById('settingsApp');
                 this.easyCountInput = document.getElementById('easyCount');
                 this.mediumCountInput = document.getElementById('mediumCount');
                 this.hardCountInput = document.getElementById('hardCount');
                 this.startExamBtn = document.getElementById('startExamBtn');
                 this.specialTestBtn = document.getElementById('specialTestBtn');
+                this.similarTestBtn = document.getElementById('similarTestBtn');
                 this.openReviewBtn = document.getElementById('openReviewBtn');
                 this.settingsError = document.getElementById('settingsError');
 
                 this.onStartExam = onStartExam;
                 this.onOpenReview = onOpenReview;
                 this.onStartSpecialExam = onStartSpecialExam;
+                this.onStartSimilarExam = onStartSimilarExam;
 
                 this.attachEventListeners();
             }
@@ -786,6 +791,10 @@
                         this.settingsContainer.style.display = 'none';
                         this.onOpenReview();
                     });
+                }
+
+                if (this.similarTestBtn) {
+                    this.similarTestBtn.addEventListener('click', () => this.handleSimilarStart());
                 }
             }
 
@@ -884,6 +893,106 @@
             showError(msg) {
                 this.settingsError.innerHTML = msg;
                 this.settingsError.style.display = 'block';
+            }
+
+            async handleSimilarStart() {
+                if (this.similarTestBtn) {
+                    this.similarTestBtn.disabled = true;
+                    this.similarTestBtn.textContent = '題庫載入與分析中...';
+                }
+                this.settingsError.style.display = 'none';
+
+                try {
+                    const response = await fetch('json/exam.json');
+                    if (!response.ok) throw new Error('無法取得題庫資料');
+                    const allQuestions = await response.json();
+
+                    // 分組邏輯
+                    const groupedQuestions = this.findSimilarGroups(allQuestions);
+                    
+                    if (groupedQuestions.length === 0) {
+                        this.showError('題庫中找不到符合條件的相似題目！');
+                        return;
+                    }
+
+                    // 對群組順序洗牌，並對群組內部順序洗牌
+                    const shuffledGroups = this.shuffleArray(groupedQuestions);
+                    let finalPaper = [];
+                    shuffledGroups.forEach(group => {
+                        finalPaper = finalPaper.concat(this.shuffleArray(group));
+                    });
+
+                    this.settingsContainer.style.display = 'none';
+                    if (this.onStartSimilarExam) {
+                        this.onStartSimilarExam(finalPaper);
+                    } else {
+                        this.onStartExam(finalPaper);
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    this.showError('無法讀取或分析題庫資料。');
+                } finally {
+                    if (this.similarTestBtn) {
+                        this.similarTestBtn.disabled = false;
+                        this.similarTestBtn.textContent = '相似題目比較';
+                    }
+                }
+            }
+
+            findSimilarGroups(questions) {
+                // 去除標點符號的 helper
+                const cleanStr = (str) => {
+                    if (!str) return "";
+                    return str.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+                };
+
+                // 取得兩字串的最大共同子字串長度
+                const getLCSLength = (str1, str2) => {
+                    const s1 = cleanStr(str1);
+                    const s2 = cleanStr(str2);
+                    let maxLen = 0;
+                    for (let i = 0; i < s1.length; i++) {
+                        for (let j = 0; j < s2.length; j++) {
+                            let len = 0;
+                            while (i + len < s1.length && j + len < s2.length && s1[i + len] === s2[j + len]) {
+                                len++;
+                            }
+                            if (len > maxLen) maxLen = len;
+                        }
+                    }
+                    return maxLen;
+                };
+
+                const parent = questions.map((_, i) => i);
+                function find(i) {
+                    if (parent[i] === i) return i;
+                    return parent[i] = find(parent[i]);
+                }
+                function union(i, j) {
+                    const rootI = find(i);
+                    const rootJ = find(j);
+                    if (rootI !== rootJ) parent[rootI] = rootJ;
+                }
+
+                // 建立 Disjoint Set (LCS >= 5 視為相似題)
+                for (let i = 0; i < questions.length; i++) {
+                    for (let j = i + 1; j < questions.length; j++) {
+                        if (getLCSLength(questions[i].問題, questions[j].問題) >= 5) {
+                            union(i, j);
+                        }
+                    }
+                }
+
+                // 將同組的題目收集起來
+                const groupMap = {};
+                for (let i = 0; i < questions.length; i++) {
+                    const root = find(i);
+                    if (!groupMap[root]) groupMap[root] = [];
+                    groupMap[root].push(questions[i]);
+                }
+
+                // 只保留題數 > 1 的群組
+                return Object.values(groupMap).filter(g => g.length > 1);
             }
         }
 
@@ -1709,6 +1818,11 @@
                 // onStartSpecialExam (隨機測驗測試模式 - 改為開啟選單)
                 (counts) => {
                     specialApp.loadAndShow(counts);
+                },
+                // onStartSimilarExam (相似題目比較模式)
+                (selectedQuestions) => {
+                    appEl.style.display = 'flex';
+                    new MockExamApp(selectedQuestions, false, { hideDifficulty: true }, backToSettings);
                 }
             );
         });
