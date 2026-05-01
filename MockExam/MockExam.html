@@ -967,8 +967,13 @@
                         return;
                     }
 
-                    // 依照題號排序
+                    // 依照難易度排序 (易、中、難)，同難度再依題號排序
+                    const diffWeight = { '易': 1, '中': 2, '難': 3 };
                     const finalPaper = filteredQuestions.sort((a, b) => {
+                        const wA = diffWeight[a.難度] || 99;
+                        const wB = diffWeight[b.難度] || 99;
+                        if (wA !== wB) return wA - wB;
+
                         const idA = parseInt(a.題號 || 0);
                         const idB = parseInt(b.題號 || 0);
                         return idA - idB;
