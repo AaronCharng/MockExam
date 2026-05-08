@@ -674,7 +674,7 @@
             <div id="settingsError" class="error-message" style="display: none;"></div>
             <button id="startExamBtn" class="btn btn-primary" style="width: 100%;">依設定開始隨機測驗</button>
             <button id="specialTestBtn" class="btn"
-                style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">進階配題測驗</button>
+                style="width: 100%; margin-top: 10px; background-color: #e6fffa; color: #2c7a7b; border-color: #81e6d9; outline: none;">特殊測驗設定</button>
             <button id="similarTestBtn" class="btn"
                 style="width: 100%; margin-top: 10px; background-color: #ebf8ff; color: #2b6cb0; border-color: #90cdf4; outline: none;">相似題目比較</button>
             <button id="andOrTestBtn" class="btn"
@@ -1494,15 +1494,23 @@
                 const finalMedium = generateForDifficulty(mediumPool, this.currentCounts.mediumReq);
                 const finalHard = generateForDifficulty(hardPool, this.currentCounts.hardReq);
 
-                const finalPaper = this.shuffleArray([...finalEasy, ...finalMedium, ...finalHard]);
+                // 依使用者要求，特殊測驗的最終試卷不打亂跨難度的順序，而是依序排列：易 -> 中 -> 難
+                const finalPaper = [...finalEasy, ...finalMedium, ...finalHard];
 
                 if (finalPaper.length === 0) {
                     alert('沒有題目可以產生！請檢查題數條件或不考比例。');
                     return;
                 }
 
+                // 計算動態斷點（在切換難度時加入分隔線）
+                const breaks = [];
+                let currentPos = finalEasy.length;
+                if (finalEasy.length > 0 && currentPos < finalPaper.length) breaks.push(currentPos - 1);
+                currentPos += finalMedium.length;
+                if (finalMedium.length > 0 && currentPos < finalPaper.length) breaks.push(currentPos - 1);
+
                 this.container.style.display = 'none';
-                this.onStartExam(finalPaper);
+                this.onStartExam(finalPaper, breaks);
             }
         }
 
@@ -1516,6 +1524,7 @@
                 this.isSpecialMode = options.isSpecialMode || false;
                 this.hideDifficulty = options.hideDifficulty || false;
                 this.isAndOrMode = options.isAndOrMode || false;
+                this.sectionBreaks = options.sectionBreaks || [24]; // 預設保留 24 作為舊版備用
                 this.onReturn = onReturn;
                 this.currentIndex = 0;
                 this.appElement = document.getElementById('app');
@@ -1554,8 +1563,8 @@
                         ${idx + 1}
                     </div>
                     `;
-                    // 若為隨機測驗測試模式，在第 25 題後插入分隔斷行
-                    if (this.isSpecialMode && idx === 24) {
+                    // 若為隨機測驗測試模式，在指定題數（難度切換處）插入分隔斷行
+                    if (this.isSpecialMode && this.sectionBreaks.includes(idx)) {
                         html += `<div style="flex-basis: 100%; height: 0; margin: 5px 0; border-bottom: 2px dashed #cbd5e0;"></div>`;
                     }
                     return html;
@@ -1864,9 +1873,9 @@
             // 準備 SpecialSetupApp
             const specialApp = new SpecialSetupApp(
                 // 產生測驗後，進入 MockExamApp
-                (selectedQuestions) => {
+                (selectedQuestions, breaks) => {
                     appEl.style.display = 'flex';
-                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true }, backToSettings);
+                    new MockExamApp(selectedQuestions, false, { isSpecialMode: true, hideDifficulty: true, sectionBreaks: breaks }, backToSettings);
                 },
                 // 返回設定
                 () => {
